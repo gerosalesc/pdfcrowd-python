@@ -23,14 +23,13 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
+from encodings import unicode_escape
 
-import urllib
-import httplib
+from urllib import parse
+import http.client as httplib
 import mimetypes
 import socket
 import base64
-
-__version__ = "2.6"
 
 
 # constants for Client.setPageLayout()
@@ -88,7 +87,7 @@ class Client:
                       StringIO, etc.; if None then the return value is a string
                       containing the PDF.
         """
-        body = urllib.urlencode(self._prepare_fields(dict(src=uri)))
+        body = parse.urlencode(self._prepare_fields(dict(src=uri))).encode('ascii')
         content_type = 'application/x-www-form-urlencoded'
         return self._post(body, content_type, 'pdf/convert/uri/', outstream)
 
@@ -100,9 +99,8 @@ class Client:
                       StringIO, etc.; if None then the return value is a string
                       containing the PDF.
         """
-        if type(html) == unicode:
-            html = html.encode('utf-8')
-        body = urllib.urlencode(self._prepare_fields(dict(src=html)))
+        html = html.encode('utf-8')
+        body = parse.urlencode(self._prepare_fields(dict(src=html))).encode('ascii')
         content_type = 'application/x-www-form-urlencoded'
         return self._post(body, content_type, 'pdf/convert/html/', outstream)
 
@@ -119,7 +117,7 @@ class Client:
 
     def numTokens(self):
         """Returns the number of available conversion tokens."""
-        body = urllib.urlencode(self._prepare_fields())
+        body = parse.urlencode(self._prepare_fields()).encode('ascii')
         content_type = 'application/x-www-form-urlencoded'
         return int(self._post(body, content_type, 'user/%s/tokens/' % self.fields['username']))
 
@@ -274,7 +272,7 @@ class Client:
 
     def _prepare_fields(self, extra_data={}):
         result = extra_data.copy()
-        for key, val in self.fields.iteritems():
+        for key, val in self.fields.items():
             if val:
                 if type(val) == float:
                     val = str(val).replace(',', '.')
@@ -284,7 +282,7 @@ class Client:
     def _encode_multipart_post_data(self, filename):
         boundary = '----------ThIs_Is_tHe_bOUnDary_$'
         body = []
-        for field, value in self._prepare_fields().iteritems():
+        for field, value in self._prepare_fields().items():
             body.append('--' + boundary)
             body.append('Content-Disposition: form-data; name="%s"' % field)
             body.append('')
@@ -293,7 +291,7 @@ class Client:
         body.append('--' + boundary)
         body.append('Content-Disposition: form-data; name="src"; filename="%s"' % filename)
         mime_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
-        body.append('Content-Type: ' + str(mime_type))
+        body.append('Content-Type: ' + mime_type)
         body.append('')
         body.append(open(filename, 'rb').read())
         # finalize
@@ -335,9 +333,9 @@ class Client:
                 return outstream
             else:
                 return response.read()
-        except httplib.HTTPException, err:
+        except httplib.HTTPException as err:
             raise Error(str(err))
-        except socket.gaierror, err:
+        except socket.gaierror as err:
             raise Error(err[1])
 
 
@@ -345,6 +343,3 @@ API_SELECTOR_BASE = '/api/'
 HOST = 'pdfcrowd.com'
 HTTP_PORT = 80
 HTTPS_PORT = 443
-
-
-
